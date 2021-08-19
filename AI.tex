@@ -168,7 +168,7 @@ $$(p_1,p_2) = \bm{P}_{ij} \Rightarrow p_1 + p_2 = 0.$$
 \chapterimage{Chapter3Image.png}
 \chapter{Tree Search Algorithm}
 
-\section{MinMax algorithm} \label{sec:minmax}
+\section{Minimax algorithm} \label{sec:minmax}
 
 \subsection*{Notations}
 
@@ -176,7 +176,7 @@ Let $\mathbb{A}$ and $\mathbb{O}$ be the set of all allowable actions and possib
 
 \subsection*{Algorithm description}
 
-The MinMax algorithm assumes a two players zero-sum game, which means that player 2 (i.e., the opponent) can maximise its payoff, or equivalently, can minimise the payoff of player 1 (i.e., the agent). The agent and the opponent play one after the other, and therefore the game can be represented by a tree where the agent plays on blue nodes, the opponent plays on red nodes and the edges represent actions. Figure \ref{fig:min_max_tree} illustrates an example of such tree.
+The minimax algorithm assumes a two players zero-sum game, which means that player 2 (i.e., the opponent) can maximise its payoff, or equivalently, can minimise the payoff of player 1 (i.e., the agent). The agent and the opponent play one after the other, and therefore the game can be represented by a tree where the agent plays on blue nodes, the opponent plays on red nodes and the edges represent actions. Figure \ref{fig:min_max_tree} illustrates an example of such tree.
 
 {
 \colorlet{Red}{red!20!white}
@@ -371,7 +371,7 @@ function minimax(node)
     return value
 \end{minted}
 
-\section{MinMax with alpha-beta pruning}
+\section{Minimax with alpha-beta pruning}
 
 \subsection*{Notations}
 
@@ -379,7 +379,7 @@ This section re-uses the notations of Section \ref{sec:minmax}. Also for each no
 
 \subsection*{Algorithm description}
 
-The MinMax algorithm with alpha-beta pruning leads to the same result as the MinMax algorithm, but cut off branches that don't need to be explored making the algorithm faster. Put simply, each time a value is back-propagate toward a red node, the algorithm updates the red-node's $\beta$ such as it remains equal to the minimal value of the red-node's children. Furthermore, if during the update $\beta$ drops below the value of $\alpha$ of the red-node's parent then the remaining red-node's children are cut off and will not be evaluated. Similarly, each time a value is back-propagate toward a blue node, the algorithm updates the blue-node's $\alpha$ such as it remains equal to the maximal value of the blue-node's children. Furthermore, if during the update $\alpha$ becomes bigger than the value of $\beta$ of the blue-node's parent then the remaining blue-node's children are cut off and will not be evaluated. Figure \ref{fig:alpha_beta_pruning} illustrates the MinMax algorithm with alpha-beta pruning.
+The minimax algorithm with alpha-beta pruning leads to the same result as the minimax algorithm, but cut off branches that don't need to be explored making the algorithm faster. Put simply, each time a value is back-propagate toward a red node, the algorithm updates the red-node's $\beta$ such as it remains equal to the minimal value of the red-node's children. Furthermore, if during the update $\beta$ drops below the value of $\alpha$ of the red-node's parent then the remaining red-node's children are cut off and will not be evaluated. Similarly, each time a value is back-propagate toward a blue node, the algorithm updates the blue-node's $\alpha$ such as it remains equal to the maximal value of the blue-node's children. Furthermore, if during the update $\alpha$ becomes bigger than the value of $\beta$ of the blue-node's parent then the remaining blue-node's children are cut off and will not be evaluated. Figure \ref{fig:alpha_beta_pruning} illustrates the minimax algorithm with alpha-beta pruning.
 
 {
 \colorlet{DarkRed}{red!80!black}
@@ -576,6 +576,87 @@ function alphabeta(node, |$\alpha$|, |$\beta$|)
     return value
 \end{minted}
 
+\section{Monte Carlo Tree Search} \label{sec:MCTS}
+
+Monte Carlo tree search (MCTS) \cite{MCTS} is an efficient planing algorithm used when the evaluation of every possible action sequences is computationally prohibitive, e.g., in chess and in the game of go \cite{GO,MuZero}. Essentially MCTS builds a tree in which each node corresponds to a future state and each edge represents the action that led to that state. Initially, the tree is only composed of a root node corresponding to the current state. From here, MCTS is a four steps process. First, a node is selected according to a criterion such as the upper confidence bound for trees (UCT):
+$$UCT = \bar{X}_j + C \sqrt{\frac{2 \ln N}{N_j}}$$
+where $N$ is the number of times the current (parent) node has been explored, $N_j$ stands for the number of times the $j$-th child node has been explored, $C > 0$ is the exploration constant and $\bar{X}_j$ is the average reward received by the $j$-th child. Importantly, the UCT aims to explore highly rewarding paths (exploitation in first term) while also visiting rarely explored regions (exploration in second term). Additionally, this criterion is first used at the root level leading to the selection of a node from the root's children. Then, it is used at the level of the root's children, and so on until a leaf node is reached. An action is then sampled from a distribution and the node corresponding to this action is added as a child of the leaf node, i.e., the leaf node is expanded.
+
+The third step consists of performing virtual rollouts into the future to estimate the average future reward obtained from the state corresponding to the newly expanded node. Finally, during the back-propagation step, the average reward obtained from the newly expanded node is used to re-evaluate the average quality of all its ancestors, and the visit counts of all nodes (in the branch explored) are increased. Iterating this four-step process until the time budget has been spent gives a fairly good estimate of the best action to perform next. Figure \ref{fig:MCTS} summarises the MCTS procedure.
+
+{
+\definecolor{Green}{rgb}{0.01, 0.75, 0.24}
+\colorlet{Red}{red!50!black}
+\colorlet{Blue}{blue!50!black}
+\renewcommand\fbox{\fcolorbox{white}{white}}
+\begin{figure}[H]
+	\begin{center}
+	\begin{tikzpicture}[scale=0.55, every node/.style={scale=0.55}]
+
+    \node[scale=1.5] (select) {$\text{Selection}$};
+    \node[yshift=0.5cm, latent, very thick, below=of select] (St) {$S_{t}$};
+    \node[yshift=0.5cm, latent, below=of St, very thick, xshift=-0.75cm] (S1) {$S_{\{1\}}$};
+    \node[yshift=0.5cm, latent, below=of St, xshift=0.75cm] (S2) {$S_{\{2\}}$};
+    \node[yshift=0.5cm, latent, below=of S1, xshift=-0.75cm] (S11) {$S_{\{11\}}$};
+    \node[yshift=0.5cm, latent, below=of S1, xshift=0.75cm, very thick] (S12) {$S_{\{12\}}$};
+    \edge[very thick] {St} {S1};
+    \draw (S1) -- (S11);
+    \edge[very thick] {S1} {S12};
+    \draw (St) -- (S2);
+
+    \node[right=of select, xshift=0.5cm,scale=1.5] (expand) {$\text{Expansion}$};
+    \node[yshift=0.5cm, latent, below=of expand] (SSt) {$S_{t}$};
+    \node[yshift=0.5cm, latent, below=of SSt, xshift=-0.75cm] (SS1) {$S_{\{1\}}$};
+    \node[yshift=0.5cm, latent, below=of SSt, xshift=0.75cm] (SS2) {$S_{\{2\}}$};
+    \node[yshift=0.5cm, latent, below=of SS1, xshift=-0.75cm] (SS11) {$S_{\{11\}}$};
+    \node[yshift=0.5cm, latent, below=of SS1, xshift=0.75cm] (SS12) {$S_{\{12\}}$};
+    \node[yshift=0.5cm, latent, below=of SS12, very thick] (SS121) {$S_{\{121\}}$};
+    \draw (SSt) -- (SS1);
+    \draw (SS1) -- (SS11);
+    \draw (SS1) -- (SS12);
+    \edge[very thick] {SS12} {SS121};
+    \draw (SSt) -- (SS2);
+
+    \node[right=of expand, xshift=0.5cm,scale=1.5] (simul) {$\text{Simulation}$};
+    \node[yshift=0.5cm, latent, below=of simul] (SSSt) {$S_{t}$};
+    \node[yshift=0.5cm, latent, below=of SSSt, xshift=-0.75cm] (SSS1) {$S_{\{1\}}$};
+    \node[yshift=0.5cm, latent, below=of SSSt, xshift=0.75cm] (SSS2) {$S_{\{2\}}$};
+    \node[yshift=0.5cm, latent, below=of SSS1, xshift=-0.75cm] (SSS11) {$S_{\{11\}}$};
+    \node[yshift=0.5cm, latent, below=of SSS1, xshift=0.75cm] (SSS12) {$S_{\{12\}}$};
+    \node[yshift=0.5cm, latent, below=of SSS12] (SSS121) {$S_{\{121\}}$};
+    \node[yshift=0.5cm, latent, below=of SSS121, shape=rectangle, very thick, yshift=-1cm] (Sim1) {$\pm 1$};
+    \draw (SSSt) -- (SSS1);
+    \draw (SSS1) -- (SSS11);
+    \draw (SSS1) -- (SSS12);
+    \draw (SSS12) -- (SSS121);
+    \edge[dashed, very thick] {SSS121} {Sim1};
+    \draw (SSSt) -- (SSS2);
+   
+    \node[right=of simul,scale=1.5] (back) {$\text{Back-propagation}$};
+    \node[yshift=0.5cm, latent, below=of back, very thick] (SSSSt) {$S_{t}$};
+    \node[yshift=0.5cm, latent, below=of SSSSt, xshift=-0.75cm, very thick] (SSSS1) {$S_{\{1\}}$};
+    \node[yshift=0.5cm, latent, below=of SSSSt, xshift=0.75cm] (SSSS2) {$S_{\{2\}}$};
+    \node[yshift=0.5cm, latent, below=of SSSS1, xshift=-0.75cm] (SSSS11) {$S_{\{11\}}$};
+    \node[yshift=0.5cm, latent, below=of SSSS1, xshift=0.75cm, very thick] (SSSS12) {$S_{\{12\}}$};
+    \node[yshift=0.5cm, latent, below=of SSSS12, very thick] (SSSS121) {$S_{\{121\}}$};
+    \draw (SSSS1) -- (SSSSt) node[midway,left,yshift=-0.2cm] {$\pm 1$};
+    \edge[very thick] {SSSS1} {SSSSt};
+    \draw (SSSS1) -- (SSSS11);
+    \draw (SSSS12) -- (SSSS1) node[midway,right,yshift=-0.2cm] {$\pm 1$};
+    \edge[very thick] {SSSS12} {SSSS1};
+    \draw (SSSS121) -- (SSSS12) node[midway,right,yshift=-0.3cm] {$\pm 1$};
+    \edge[very thick] {SSSS121} {SSSS12};
+    \draw (SSSSt) -- (SSSS2);
+
+    \end{tikzpicture}
+	\end{center}
+\vspace{-0.25cm}
+    \caption{
+This figure illustrates the MCTS algorithm as a four steps process. First, a node is selected. Second, the tree is expanded by taking a virtual action from the selected node. Third, the value of this action is estimated by simulating the expected reward following that action. In the simplest version of MCTS, simulations are ran until a terminal state is reached, e.g., until the game ends in Go or Chess. Fourth, the expected value is back-propagated to upward in three from the newly expanded node. The multi-indices in parenthesis denote action sequences taken from the root node, which denotes the current state of the environment.}
+    \label{fig:MCTS}
+\end{figure}
+}
+
 %----------------------------------------------------------------------------------------
 %	CHAPTER 4
 %----------------------------------------------------------------------------------------
@@ -583,15 +664,117 @@ function alphabeta(node, |$\alpha$|, |$\beta$|)
 \chapterimage{Chapter4Image.png}
 \chapter{Probabilistic Graphical Model}
 
-\section{Bayesian Network}
+Probabilistic graphical models refer to a class of graph used to depict probabilistic model. This chapter describes different types of popular graphical models \citep{GraphicalModels}, i.e., Bayesian networks, Forney factor graphs, factor graphs and Markov random field.
 
-\section{Normal Factor Graph}
+\section{Bayesian Networks}
 
-\cite{FFG}
+Bayesian networks \cite{BayesianNetworks} are ideal for describing model that can be expressed in the following form:
+\begin{align*}
+P(X_1,...,X_N) = \prod_{i = 1}^N P(X_i|\text{pa}_i)
+\end{align*}
+where $\text{pa}_i$ is the set of random variables on which $X_i$ depend, i.e. the parents of $X_i$. In a Bayesian network random variables are represented by round nodes while statistical dependencies are represented by edges. Also, observed (or realised) random variables are generally depicted with a gray background while latent (or hidden) variables have a white background.
 
-\section{Factor Graph}
+\begin{example}[Simple Bayesian Network]
+The generative model defined by $P(X_1,X_2) = P(X_1|X_2)P(X_2)$, where $X_1$ is observed and $X_2$ is latent, can be illustrated using the formalism of Bayesian networks as in Figure \ref{fig:bayesian_network}.
+\end{example}
 
-\section{Markov Random Field}
+\begin{figure}[H]
+	\begin{center}
+	\begin{tikzpicture}
+    \node[latent] (X2) {$X_2$};
+    \node[obs, below=of X2] (X1) {$X_1$};
+    \edge {X2} {X1};
+    \end{tikzpicture}
+	\end{center}
+\vspace{-0.25cm}
+    \caption{A Bayesian network representing a generative model over two variables, i.e., $X_1$ which is observed and $X_2$ which is hidden.}
+    \label{fig:bayesian_network}
+\end{figure}
+
+\section{Factor Graphs}\label{sec:ffg}
+
+In a factor graph \cite{FG} the random variables are represented by round nodes, factors of the probability distribution are represented by square nodes and edges connect each variable node to the factors it is involved in.
+
+\begin{example}[Simple Factor Graph]
+The generative model defined by $P(X_1,X_2) = P(X_1|X_2)P(X_2)$, where $X_1$ is observed and $X_2$ is latent, can be illustrated using the formalism of Bayesian networks as in Figure \ref{fig:factor_graph}.
+\end{example}
+
+\begin{figure}[H][square/.style={regular polygon,regular polygon sides=4}]
+	\begin{center}
+	\begin{tikzpicture}
+    \node[latent] (X2) {$X_2$};
+    \node[obs, below=of X2] (X1) {$X_1$};
+    \edge {X2} {X1};
+    \end{tikzpicture}
+	\end{center}
+\vspace{-0.25cm}
+    \caption{A Bayesian network representing a generative model over two variables, i.e., $X_1$ which is observed and $X_2$ which is hidden.}
+    \label{fig:factor_graph}
+\end{figure}
+
+\section{Forney Factor Graphs}
+
+A (Forney) factor graph \cite{FFG} can repre which uses three kinds of nodes. The nodes representing hidden and observed variables are depicted by white and gray circles, respectively. And the distribution's factors are represented using white squares, which are linked to variable nodes by arrows or lines. Arrows are used to connect factors to their target variable, while lines link factors to their predictors. Figure \ref{fig:type-elements-ffg} shows an example of Forney factor graph corresponding to the following generative model:
+\begin{align} \label{eq:general-generative-model}
+P(O,S) = {\color{red!90!black}P_{O}}(O|S){\color{blue!50!black}P_{S}}(S).
+\end{align}
+
+Generally, factor graphs only describe the model's structure such as the variables and their dependencies, but do not specify the definition of individual factors. For example, the definitions of ${\color{red!90!black}P_{O}}$ and ${\color{blue!50!black}P_{S}}$ are not given by Figure \ref{fig:type-elements-ffg}, and additional information is required to remove the ambiguity, e.g., ${\color{blue!50!black}P_{S}}(S) = \mathcal{N}(S;\mu, \sigma)$ clarify that ${\color{blue!50!black}P_{S}}$ is a Gaussian distribution.
+
+\begin{example}[Simple Bayesian Network]
+The generative model defined by $P(X_1,X_2) = P(X_1|X_2)P(X_2)$, where $X_1$ is observed and $X_2$ is latent, can be illustrated using the formalism of Bayesian networks as in Figure \ref{fig:bayesian_network}.
+\end{example}
+
+\begin{figure}[H]
+	\begin{center}
+	\begin{tikzpicture}
+    \node[latent] (X2) {$X_2$};
+    \node[obs, below=of X2] (X1) {$X_1$};
+    \edge {X2} {X1};
+    \end{tikzpicture}
+	\end{center}
+\vspace{-0.25cm}
+    \caption{A Bayesian network representing a generative model over two variables, i.e., $X_1$ which is observed and $X_2$ which is hidden.}
+    \label{fig:bayesian_network}
+\end{figure}
+
+
+\begin{figure}[H]
+	\begin{center}
+    \begin{tikzpicture}[scale=0.5]
+        \node[latent, shape=rectangle, scale=0.6] (F1) {${\color{blue!50!black}P_S}$};
+        \node[latent, below=of F1, scale=0.85, yshift=0.5cm] (HS) {$S$};
+        \node[latent, below=of HS, shape=rectangle, yshift=0.5cm, scale=0.6] (F2) {${\color{red!90!black}P_O}$};
+        \node[obs, below=of F2, scale=0.85, yshift=0.5cm] (X) {$O$};
+        \edge {F1} {HS}
+        \draw[black] (HS) -- (F2);
+        \edge {F2} {X}
+
+		\draw[black,thick] (0,-3.25) -- (-2,-2.25) node[anchor=south east] {Line};
+		\draw[black,thick] (-2,-2.25) -- (-3.1,-2.25);
+
+		\draw[black,thick] (0,-5) -- (-2,-4) node[anchor=south east] {Arrow};
+		\draw[black,thick] (-2,-4) -- (-3.4,-4);
+
+		\draw[black,thick] (0.53,-1.9) -- (2,-1) node[anchor=south west] {Hidden variable};
+		\draw[black,thick] (2,-1) -- (4.95,-1);
+
+		\draw[black,thick] (0.4,-4.2) -- (2.15,-3.1) node[anchor=south west] {Factor};
+		\draw[black,thick] (2.15,-3.1) -- (3.55,-3.1);
+
+		\draw[black,thick] (0.53,-6.05) -- (2,-5.1) node[anchor=south west] {Observed variable};
+		\draw[black,thick] (2,-5.1) -- (5.35,-5.1);
+
+    \end{tikzpicture}
+	\end{center}
+	\caption[Forney Factor Graph]{This figure illustrates the Forney factor graph corresponding to the following generative model: $P(O,S) = {\color{red!90!black}P_{O}}(O|S){\color{blue!50!black}P_{S}}(S)$. The hidden state is represented by a white circle with the variable's name at the center, and the observed variable is depicted similarly but with a gray background. The factors of the generative model are represented by squares with a white background and the factor's name at the center. Finally, arrows connect the factors to their target variable and lines link each factor to its predictor variables.}
+    \label{fig:ffg}
+\end{figure}
+
+\subsection{Normal Factor Graphs}
+
+
+\section{Markov Random Fields}
 
 \vskip 0.2in
 \bibliographystyle{apalike}
